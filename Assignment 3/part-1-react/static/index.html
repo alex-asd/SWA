@@ -1,0 +1,48 @@
+<html>
+<head> 
+    <title>Weather Data</title>
+    <style>
+        td {
+            width: 40px;
+            height: 40px;
+            border: 1px solid black;
+        }
+        table {
+            border: 1px solid black;
+            border-spacing: 0;
+        }
+    </style>
+    <script type = 'module'>
+        import model from './model.js'
+        import store from './store.js'
+        import view from './view.js'
+        import dispatcher from './dispatcher.js'
+        
+        window.init = async function init() {
+            try {
+                const data_res = await fetch('http://localhost:8080/data')
+                const data = await data_res.json()
+                const prediction = await fetch('http://localhost:8080/forecast').then(res => res.json())
+                const modelData = model(data, employees)
+                const modelPrediction = model(data, employees)
+                let theDispatcher
+                const { view: theView, renderer } = view(window, () => theDispatcher)
+                const theStore = store(theModel, theView, renderer)
+                theDispatcher = dispatcher(theStore)
+                renderer(theView(theModel))
+            } catch (err) {
+                console.log(err)
+            }
+        }
+    </script>
+</head>
+<body onload="init()">
+    <div id='base'>
+        <h1>Weather Data</h1>
+        <table id='employees'>
+            <thead><tr><td>Id</td><td>Name</td><td>Employee id</td><td>Salary</td><td>Manager</td></tr></thead>
+            <tbody id='employee_data'></tbody>
+        </table>
+    </div>
+</body>
+</html>

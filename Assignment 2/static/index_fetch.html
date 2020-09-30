@@ -1,0 +1,146 @@
+<html>
+  <head>
+
+  </head>
+  <body>
+    <p id="Horsens"></p>
+    <p id="Aarhus"></p>
+    <p id="Copenhagen"></p>
+
+  </body>
+
+  <script type = 'module'>
+    import model from './model.js'
+
+    function getStringForData(data) {
+      var str = "<ul style='float:left; width:25%; margin:0; padding:0;'><h3>" + data.type + " </h3> " 
+      for(var x in data) {
+        if(!(x === 'type'))
+          str+= "<li>" + x + ": " + data[x] + "</li>"
+      }
+      return str + "</ul>"
+    }
+
+    function getPredictionStringFor24hrs(forecastData) {
+      let forecastString = ""
+      for(var x in forecastData) {
+        let predDate = new Date(forecastData[x].time)
+        forecastString += "On " + predDate.getDate() + "." + predDate.getMonth() + " at " 
+        + predDate.getHours() + " o'clock the " + forecastData[x].type + 
+        " is expected to be between " + forecastData[x].from + " and " + forecastData[x].to + forecastData[x].unit + "<br>"
+      }
+      return forecastString
+    }
+
+    function average(data) {
+      let numOfEntries = data.length
+      let sum = 0
+      for(var x in data) {
+        sum = sum + data[x].value
+      }
+      return (sum/numOfEntries).toFixed(2)
+    }
+
+    function getDataFor(city){
+      const request = new XMLHttpRequest()
+
+      fetch("http://localhost:8080/data/" + city)
+      .then(res => res.json())
+        .then(data => {
+        
+        let forecastData = ""
+        let fiveDays = new Date()
+        fiveDays.setDate(fiveDays.getDate() - 5)
+
+        let latestTemperature = data.filter(data => data.type === 'temperature').reduce(function(prev, current) {
+            return (prev.time > current.time) ? prev : current
+        })
+
+        let latestPrecipation = data.filter(data => data.type === 'precipitation').reduce(function(prev, current) {
+            return (prev.time > current.time) ? prev : current
+        })
+
+        let latestWindSpeed = data.filter(data => data.type === 'wind speed').reduce(function(prev, current) {
+            return (prev.time > current.time) ? prev : current
+        })
+
+        let latestCloudCoverage = data.filter(data => data.type === 'cloud coverage').reduce(function(prev, current) {
+            return (prev.time > current.time) ? prev : current
+        })
+
+        let minTemp = data.filter(data => data.type === 'temperature' && new Date(data.time) > fiveDays).reduce(function(prev, current) {
+          return (prev.value < current.value) ? prev : current
+        })
+
+        let maxTemp = data.filter(data => data.type === 'temperature' && new Date(data.time) > fiveDays).reduce(function(prev, current) {
+          return (prev.value > current.value) ? prev : current
+        })
+
+        let precipitationLastFiveDays = data.filter(data => data.type === 'precipitation' && new Date(data.time) > fiveDays).reduce(
+          function (acc, data) {
+            return acc + data.value
+          }, 0).toFixed(2)
+
+        let windSpeedDataEntries = data.filter(data => data.type === 'wind speed' && new Date(data.time) > fiveDays)
+        
+        const typeCount = data => {
+          let result = { West: 0, East: 0, North: 0, South: 0, Southwest: 0, Southeast:0, Northwest: 0, Northeast: 0}
+          for(let entry of data) {
+              result = { ...result, [entry.direction]: result[entry.direction]+1 }
+          }
+          return result   
+        }
+
+        let cloudCoverageEntries = data.filter(data => data.type === 'cloud coverage' && new Date(data.time) > fiveDays)
+        let counted = typeCount(windSpeedDataEntries)
+        let maxNum = 0;
+        let maxNumDirection = ""
+        for(var z in counted) {
+          if(counted[z] > maxNum) {
+            maxNum = counted[z]
+            maxNumDirection = z
+          }
+          //console.log(z  + " " +counted[z])
+        }
+        console.log(typeCount(windSpeedDataEntries))
+        //const sorted = typeCount(windSpeedDataEntries).sort((a, b) => a - b);
+        
+        
+
+        request.open("GET", "http://localhost:8080/forecast/" + city)
+        request.send()
+        request.onload = () => {
+          let timeNow = new Date().getTime()
+          forecastData = JSON.parse(request.responseText).filter(forecastData => forecastData.place === city && new Date(forecastData.time).getTime() > timeNow + 24)
+
+          let forecastString = "The weather predictions in " + city + " for the next 24 hours: <br>" + getPredictionStringFor24hrs(forecastData)
+
+          let htmlString = "<h1>" + city + "</h1> <br> The latest data from each type: <div style='width:100%;'> "
+        + getStringForData(latestTemperature)
+        + getStringForData(latestPrecipation)
+        + getStringForData(latestCloudCoverage)
+        + getStringForData(latestWindSpeed) + "<br>" 
+        + "Minimum temperature from the last 5 days: " + minTemp.value + "<br>"
+        + "Maximum temperature from the last 5 days: " + maxTemp.value + "<br>"
+        + "Total precipitation for the last 5 days: " + precipitationLastFiveDays + "<br>"
+        + "Average wind speed for the last 5 days: " + average(windSpeedDataEntries) +"<br>"
+        + "Dominant wind direction for the last 5 days: " + maxNumDirection + "  with " + maxNum + " entries" + "<br>"
+        + "Average cloud coverage for the last 5 days: " + average(cloudCoverageEntries) + "% <br>"
+        + forecastString +
+         "</div> <hr>"
+
+          document.getElementById(city).innerHTML = htmlString
+        }
+        
+        //  document.getElementById(city).innerHTML = htmlString
+      })
+    }
+    
+
+    getDataFor("Horsens")
+    getDataFor("Aarhus")
+    getDataFor("Copenhagen")
+
+
+  </script>
+</html>

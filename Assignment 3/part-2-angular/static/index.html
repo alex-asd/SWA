@@ -1,0 +1,49 @@
+<html ng-app='weatherApp'>
+  <head>
+    <title>Weather App</title>
+    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/angularjs/1.6.5/angular.min.js"></script>
+    <script type="text/javascript" src="main.js"></script>
+  </head>
+  <body ng-controller="WeatherController">
+    <select ng-change="loadDataFor()" ng-model="selectedItem">
+      <option ng-repeat="city in cities" value="{{ city.name }}">{{ city.name }}</option>
+    </select>
+    <button ng-click="refresh()">Refresh</button>
+    <label for="from">From:</label>
+    <input id="from" type="datetime-local" ng-model="fromDate" ng-change="loadDataFor()">
+    <label for="to">To:</label>
+    <input id="to" type="datetime-local" ng-model="toDate" ng-change="loadDataFor()">
+    <br> <hr>
+    <!-- {"value":19.8,"type":"temperature","unit":"C","t3ime":"2019-11-06T23:00:00.000Z","place":"Horsens"} -->
+
+    <select ng-model="dataType">
+      <option ng-repeat="dt in dataTypes" value = "{{ dt.type }}">{{ dt.type }} </option>
+    </select>
+    <!-- <select ng-model="unitType">
+        <option ng-repeat="unit in dataTypes.units" value = "{{ dt.unit }}">{{ dt.unit }} </option>
+    </select> -->
+
+    <input id="value" ng-model="valueEntry" type="text" placeholder="Value"/>
+    
+    <input id="date" ng-model="dateEntry" type="datetime-local" placeholder="Date"/>
+
+    <button ng-click="addData()">Add Data</button>
+    <br><hr>
+    <div style="white-space: pre-wrap;">
+      {{ data }}
+      {{ latestTemperature }}
+      {{ latestPrecipation }}
+      {{ latestCloudCoverage }}
+      {{ latestWindSpeed }}
+      {{ minTemp }}
+      {{ maxTemp }}
+      {{ precipitationLastFiveDays }}
+      {{ windSpeedDataEntries }}
+      {{ maxNumDirection }} {{ maxNum }}
+      {{ cloudCoverageEntries }}
+      {{ forecastData }}
+      {{ forecastPredictions }}
+      
+    </div>
+  </body>
+</html>

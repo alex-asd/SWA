@@ -1,0 +1,136 @@
+<html>
+    <head>
+        <style>
+        </style>
+ 
+    </head>
+    <body onload="onPageLoad()">
+      <b><input type="checkbox" id="sub" name="warnings" value="on" onclick="subscribe()" checked>Warnings</b><br>
+      <select id="severitySelector" onchange="updateView()">
+        <option value=0 selected="selected">0</option>
+        <option value=1>1</option>
+        <option value=2>2</option>
+        <option value=3>3</option>
+        <option value=4>4</option>
+        <option value=5>5</option>
+        <option value=6>6</option>
+        <option value=7>7</option>
+        <option value=8>8</option>
+        <option value=9>9</option>
+        <option value=10>10</option>
+      </select>
+      <p id="current"></p> <br><br>
+      <p id="previous"></p>
+ 
+      <script>
+          let updateCalled = false;
+          let dataArray = []
+          let oldDataArray = []
+          let latestString = ''
+          let current = document.getElementById("current")
+          let previous = document.getElementById("previous")
+          let ws
+ 
+          onPageLoad = () => {
+            ws = new WebSocket("ws://localhost:8090/warnings")
+            ws.onopen = () => {
+              console.log("connection is opened")
+              const message = 'subscribe'
+              ws.send(message)
+            }
+            ws.onmessage = message => {
+              if(!updateCalled) {
+                updateCalled = true
+                oldDataArray = [...dataArray]
+                //Wait for about 3 seconds for all of the messages to come.
+                setTimeout(function(){ updateView(); }, 3210);
+              }
+              updateArray(message.data)
+            }
+          }
+ 
+ 
+          updateArray = (msgArr) => {
+            var msgData = JSON.parse(msgArr);
+ 
+            if(!(typeof msgData.warnings === 'undefined')) { //The initial update!
+              msgData.warnings.forEach(element => {
+                  dataArray.push(element)
+                  console.log("PUSHING A NEW ELEMENT" + element.id)
+              });
+             
+            } else {
+              //Returns -1 if the item doesn't exist in the array
+              const indx = dataArray.findIndex(element => element.id == msgData.id)
+             
+              //If the warning was closed
+              if(msgData.prediction == null) {
+                dataArray[indx] = msgData
+                dataArray = dataArray.filter(x => x.prediction != null)
+              }
+ 
+              //If the warning is existent, but has to be edited.
+              else if(indx != -1 && msgData.prediction != null) {
+                  dataArray[indx] = msgData  
+              }
+ 
+              //If the warning is non-existent
+              else {
+                console.log("pushing element with ID: " + msgData.id )
+                dataArray.push(msgData);
+              }
+            }
+          }
+ 
+          updateView = () => {  
+            updateCalled = false
+            var selector = document.getElementById("severitySelector");
+            var minSeverity = selector.options[selector.selectedIndex].value;
+ 
+            //make up the string for the new data
+            latestString = ''
+            var filteredArray = dataArray.filter(e => e.severity >= minSeverity)
+            filteredArray.forEach(element => {
+              if(element.prediction != null) {
+                latestString +=  '[' + element.id + '] Severity: ' + element.severity + '  prediction type: ' + element.prediction.type
+                  + '  place: ' + element.prediction.place + '  from: ' + element.prediction.from + '  to: ' + element.prediction.to
+                  + ' in ' + element.prediction.unit + '<br>'
+              }
+            })
+ 
+            //Make up the string for the old data
+            oldString = ''
+            var oldFiltered = oldDataArray.filter(e => e.severity >= minSeverity)
+            oldFiltered.forEach(element => {
+              if(element.prediction != null) {
+                oldString +=  '[' + element.id + '] Severity: ' + element.severity + '  prediction type: ' + element.prediction.type
+                  + '  place: ' + element.prediction.place + '  from: ' + element.prediction.from + '  to: ' + element.prediction.to
+                  + ' in ' + element.prediction.unit + '<br>'
+              }
+            })
+ 
+            current.innerHTML = '<b>Latest warning data</b> <br>' + latestString
+            previous.innerHTML = '<b>Warning data from the second to last update</b> <br>' + oldString
+            console.log("update called")
+          }
+ 
+          function subscribe()
+        {
+          if (document.getElementById('sub').checked)
+          {
+            //Clean the arrays in case there was a cancellation of warnings during the time we were unsubscribed
+            dataArray = []
+            oldDataArray = []
+            ws.send('subscribe')
+            console.log('Subscribed')
+          } else
+          {
+            const message = 'unsubscribe';
+            ws.send(message);
+            console.log('Unsubscribed');
+          }
+        }
+ 
+        </script>
+    </body>
+</html>
